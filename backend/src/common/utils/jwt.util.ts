@@ -16,3 +16,19 @@ export const generateRefreshToken = (payload: JwtPayload): string => {
   });
 };
 
+export const verifyAccessToken = (token: string): JwtPayload => {
+  try {
+    return jwt.verify(token, jwtConfig.secret) as JwtPayload;
+  } catch (error) {
+    throw new UnauthorizedError('Invalid or expired token');
+  }
+};
+
+export const verifyRefreshToken = (token: string): JwtPayload => {
+  try {
+    return jwt.verify(token, jwtRefreshConfig.secret) as JwtPayload;
+  } catch (error) {
+    throw new UnauthorizedError('Invalid or expired refresh token');
+  }
+};
+
