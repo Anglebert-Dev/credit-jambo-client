@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  firstName     String   @map("first_name")
+  lastName      String   @map("last_name")
+  phoneNumber   String   @unique @map("phone_number")
+  role          String   @default("customer")
+  status        String   @default("active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  refreshTokens    RefreshToken[]
+  savingsAccount   SavingsAccount?
+  creditRequests   CreditRequest[]
+  notifications    Notification[]
+
+  @@index([email])
+  @@index([phoneNumber])
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  token      String    @unique
+  deviceInfo String?   @map("device_info")
+  ipAddress  String?   @map("ip_address")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model SavingsAccount {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  balance   Decimal  @default(0) @db.Decimal(15, 2)
+  currency  String   @default("RWF")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+  @@map("savings_accounts")
+}
+
+model Transaction {
+  id               String   @id @default(uuid())
+  savingsAccountId String   @map("savings_account_id")
+  type             String
+  amount           Decimal  @db.Decimal(15, 2)
+  balanceBefore    Decimal  @map("balance_before") @db.Decimal(15, 2)
+  balanceAfter     Decimal  @map("balance_after") @db.Decimal(15, 2)
+  description      String?
+  referenceNumber  String   @unique @map("reference_number")
+  status           String   @default("completed")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  savingsAccount SavingsAccount @relation(fields: [savingsAccountId], references: [id], onDelete: Cascade)
+
+  @@index([savingsAccountId])
+  @@index([createdAt])
+  @@index([referenceNumber])
+  @@map("transactions")
+}
+
+model CreditRequest {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  amount          Decimal   @db.Decimal(15, 2)
+  purpose         String    @db.Text
+  durationMonths  Int       @map("duration_months")
+  interestRate    Decimal   @default(5.00) @map("interest_rate") @db.Decimal(5, 2)
+  status          String    @default("pending")
+  approvedBy      String?   @map("approved_by")
+  approvedAt      DateTime? @map("approved_at")
+  rejectionReason String?   @map("rejection_reason") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repayments CreditRepayment[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("credit_requests")
+}
+
+model CreditRepayment {
+  id              String   @id @default(uuid())
+  creditRequestId String   @map("credit_request_id")
+  amount          Decimal  @db.Decimal(15, 2)
+  referenceNumber String   @unique @map("reference_number")
+  paymentDate     DateTime @default(now()) @map("payment_date")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  creditRequest CreditRequest @relation(fields: [creditRequestId], references: [id], onDelete: Cascade)
+
+  @@index([creditRequestId])
+  @@index([referenceNumber])
+  @@map("credit_repayments")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String
+  title     String
+  message   String   @db.Text
+  read      Boolean  @default(false)
+  sentAt    DateTime @default(now()) @map("sent_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@map("notifications")
+}

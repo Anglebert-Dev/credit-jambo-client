@@ -10,3 +10,9 @@ dist
 .vscode
 .idea
 .DS_Store
+
+/generated/prisma
+
+
+prisma/generator
+prisma/migrations
