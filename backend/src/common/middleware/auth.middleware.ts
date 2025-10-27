@@ -1,4 +1,3 @@
-// JWT verification middleware
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/jwt.util';
 import { UnauthorizedError } from '../exceptions/UnauthorizedError';

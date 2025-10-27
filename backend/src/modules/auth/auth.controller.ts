@@ -1,5 +1,4 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { body } from 'express-validator';
 import { AuthService } from './auth.service';
 import { validationMiddleware } from '../../common/middleware/validation.middleware';
 import { authMiddleware } from '../../common/middleware/auth.middleware';

@@ -10,7 +10,7 @@ module.exports = {
     'src/**/*.ts',
     '!src/**/*.types.ts',
     '!src/**/*.d.ts',
-    '!src/server.ts',
+    '!src/main.ts',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
