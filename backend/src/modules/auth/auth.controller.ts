@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { validationMiddleware } from '../../common/middleware/validation.middleware';
 import { authMiddleware } from '../../common/middleware/auth.middleware';
 import { registerValidation, loginValidation, refreshTokenValidation } from './auth.validation';
+import { successResponse } from '../../common/utils/response.util';
 
 const router = Router();
 const authService = new AuthService();
@@ -69,7 +70,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await authService.register(req.body);
-      res.status(201).json({ success: true, data: result });
+      res.status(201).json(successResponse(result, 'User registered successfully'));
     } catch (error) {
       next(error);
     }
@@ -126,7 +127,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await authService.login(req.body);
-      res.json({ success: true, data: result });
+      res.json(successResponse(result, 'Login successful'));
     } catch (error) {
       next(error);
     }
@@ -179,7 +180,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await authService.refreshToken(req.body.refreshToken);
-      res.json({ success: true, data: result });
+      res.json(successResponse(result, 'Token refreshed successfully'));
     } catch (error) {
       next(error);
     }
@@ -231,7 +232,7 @@ router.post(
       const accessToken = authHeader?.split(' ')[1] || '';
       
       await authService.logout(req.body.refreshToken, accessToken);
-      res.json({ success: true, message: 'Logged out successfully' });
+      res.json(successResponse(null, 'Logged out successfully'));
     } catch (error) {
       next(error);
     }

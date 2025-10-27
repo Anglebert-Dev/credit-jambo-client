@@ -55,8 +55,10 @@ model RefreshToken {
 model SavingsAccount {
   id        String   @id @default(uuid())
   userId    String   @unique @map("user_id")
+  name      String   @default("My Savings Account")
   balance   Decimal  @default(0) @db.Decimal(15, 2)
   currency  String   @default("RWF")
+  status    String   @default("active")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -64,6 +66,7 @@ model SavingsAccount {
   transactions Transaction[]
 
   @@index([userId])
+  @@index([status])
   @@map("savings_accounts")
 }
 

@@ -4,6 +4,7 @@ import { UsersService } from './users.service';
 import { authMiddleware } from '../../common/middleware/auth.middleware';
 import { validationMiddleware } from '../../common/middleware/validation.middleware';
 import { updateProfileValidation, changePasswordValidation } from './users.validation';
+import { successResponse } from '../../common/utils/response.util';
 
 const router = Router();
 const usersService = new UsersService();
@@ -58,7 +59,7 @@ router.get(
   async (req: Request & { user?: { sub: string } }, res: Response, next: NextFunction) => {
     try {
       const result = await usersService.getProfile(req.user!.sub);
-      res.json({ success: true, data: result });
+      res.json(successResponse(result));
     } catch (error) {
       next(error);
     }
@@ -113,7 +114,7 @@ router.put(
   async (req: Request & { user?: { sub: string } }, res: Response, next: NextFunction) => {
     try {
       const result = await usersService.updateProfile(req.user!.sub, req.body);
-      res.json({ success: true, data: result });
+      res.json(successResponse(result, 'Profile updated successfully'));
     } catch (error) {
       next(error);
     }
@@ -168,7 +169,7 @@ router.patch(
   async (req: Request & { user?: { sub: string } }, res: Response, next: NextFunction) => {
     try {
       await usersService.changePassword(req.user!.sub, req.body);
-      res.json({ success: true, message: 'Password changed successfully' });
+      res.json(successResponse(null, 'Password changed successfully'));
     } catch (error) {
       next(error);
     }
