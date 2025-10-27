@@ -1,19 +1,21 @@
 // JWT generation/verification utilities
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { UnauthorizedError } from '../exceptions/UnauthorizedError';
 import { jwtConfig, jwtRefreshConfig } from '../../config/jwt.config';
 import { JwtPayload } from '../types/jwt.types';
 
 export const generateAccessToken = (payload: JwtPayload): string => {
-  return jwt.sign(payload, jwtConfig.secret, {
+  const options: SignOptions = {
     expiresIn: jwtConfig.expiresIn,
-  });
+  };
+  return jwt.sign(payload, jwtConfig.secret, options);
 };
 
 export const generateRefreshToken = (payload: JwtPayload): string => {
-  return jwt.sign(payload, jwtRefreshConfig.secret, {
+  const options: SignOptions = {
     expiresIn: jwtRefreshConfig.expiresIn,
-  });
+  };
+  return jwt.sign(payload, jwtRefreshConfig.secret, options);
 };
 
 export const verifyAccessToken = (token: string): JwtPayload => {
