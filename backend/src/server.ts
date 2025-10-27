@@ -31,7 +31,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Error handling middleware (must be last)
 app.use(errorMiddleware);
 
 app.listen(PORT, () => {

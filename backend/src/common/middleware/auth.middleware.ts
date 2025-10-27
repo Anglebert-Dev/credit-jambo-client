@@ -2,9 +2,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/jwt.util';
 import { UnauthorizedError } from '../exceptions/UnauthorizedError';
+import { JwtPayload } from '../types/jwt.types';
+import { isBlacklisted } from '../utils/tokenBlacklist.util';
 
 export const authMiddleware = async (
-  req: Request,
+  req: Request & { user?: JwtPayload },
   res: Response,
   next: NextFunction
 ) => {
@@ -16,6 +18,12 @@ export const authMiddleware = async (
     }
 
     const token = authHeader.split(' ')[1];
+    
+    const blacklisted = await isBlacklisted(token);
+    if (blacklisted) {
+      throw new UnauthorizedError('Token has been revoked');
+    }
+    
     const payload = verifyAccessToken(token);
 
     req.user = payload;
