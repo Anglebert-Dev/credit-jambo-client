@@ -1,0 +1,2 @@
+// UnauthorizedError exception
+

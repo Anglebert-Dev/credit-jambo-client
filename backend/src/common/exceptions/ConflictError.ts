@@ -1,0 +1,2 @@
+// ConflictError exception
+
