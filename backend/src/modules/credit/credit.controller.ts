@@ -1,4 +1,3 @@
-// Credit routes controller
 import { Router, Request, Response, NextFunction } from 'express';
 import { CreditService } from './credit.service';
 import { authMiddleware } from '../../common/middleware/auth.middleware';

@@ -1,4 +1,3 @@
-// Credit DTOs/types
 export interface CreditRequestDto {
   amount: number;
   purpose: string;

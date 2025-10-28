@@ -1,4 +1,3 @@
-// Savings routes controller
 import { Router, Request, Response, NextFunction } from 'express';
 import { SavingsService } from './savings.service';
 import { authMiddleware } from '../../common/middleware/auth.middleware';

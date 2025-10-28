@@ -1,4 +1,3 @@
-// Request logging middleware
 import { Request, Response, NextFunction } from 'express';
 import morgan from 'morgan';
 

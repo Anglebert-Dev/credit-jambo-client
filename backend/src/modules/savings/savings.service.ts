@@ -1,4 +1,3 @@
-// Savings business logic
 import { BadRequestError } from '../../common/exceptions/BadRequestError';
 import { NotFoundError } from '../../common/exceptions/NotFoundError';
 import { ConflictError } from '../../common/exceptions/ConflictError';

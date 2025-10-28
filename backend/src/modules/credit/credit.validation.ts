@@ -1,4 +1,3 @@
-// Request validation schemas
 import { body, query } from 'express-validator';
 
 export const requestCreditValidation = [

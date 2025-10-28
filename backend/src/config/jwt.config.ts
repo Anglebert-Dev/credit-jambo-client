@@ -1,4 +1,3 @@
-// JWT configuration
 import type { SignOptions } from 'jsonwebtoken';
 
 export const jwtConfig = {

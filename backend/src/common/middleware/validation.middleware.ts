@@ -1,4 +1,3 @@
-// Request validation middleware
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { BadRequestError } from '../exceptions/BadRequestError';

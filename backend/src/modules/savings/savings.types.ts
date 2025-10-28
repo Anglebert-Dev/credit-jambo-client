@@ -1,4 +1,3 @@
-// Savings DTOs/types
 export interface DepositDto {
   amount: number;
   description?: string;
