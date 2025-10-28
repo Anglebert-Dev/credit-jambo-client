@@ -1,15 +1,16 @@
-import prisma from '../../config/database';
 import { verifyPassword, hashPassword } from '../../common/utils/hash.util';
 import { UnauthorizedError } from '../../common/exceptions/UnauthorizedError';
 import { NotFoundError } from '../../common/exceptions/NotFoundError';
 import { ConflictError } from '../../common/exceptions/ConflictError';
 import { UpdateProfileDto, ChangePasswordDto, UserProfile } from './users.types';
+import { NotificationsService } from '../notifications/notifications.service';
+import { PrismaUsersRepository, UsersRepository } from './users.repository';
 
 export class UsersService {
+  constructor(private readonly repo: UsersRepository = new PrismaUsersRepository()) {}
+
   async getProfile(userId: string): Promise<UserProfile> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
+    const user = await this.repo.findById(userId);
 
     if (!user) {
       throw new NotFoundError('User not found');
@@ -29,31 +30,24 @@ export class UsersService {
   }
 
   async updateProfile(userId: string, data: UpdateProfileDto): Promise<UserProfile> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
+    const user = await this.repo.findById(userId);
 
     if (!user) {
       throw new NotFoundError('User not found');
     }
 
     if (data.phoneNumber && data.phoneNumber !== user.phoneNumber) {
-      const existingUser = await prisma.user.findUnique({
-        where: { phoneNumber: data.phoneNumber }
-      });
+      const existingUser = await this.repo.findByPhone(data.phoneNumber);
 
       if (existingUser) {
         throw new ConflictError('Phone number is already in use');
       }
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(data.firstName && { firstName: data.firstName }),
-        ...(data.lastName && { lastName: data.lastName }),
-        ...(data.phoneNumber && { phoneNumber: data.phoneNumber })
-      }
+    const updatedUser = await this.repo.updateById(userId, {
+      ...(data.firstName && { firstName: data.firstName }),
+      ...(data.lastName && { lastName: data.lastName }),
+      ...(data.phoneNumber && { phoneNumber: data.phoneNumber })
     });
 
     return {
@@ -70,9 +64,7 @@ export class UsersService {
   }
 
   async changePassword(userId: string, data: ChangePasswordDto): Promise<void> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
+    const user = await this.repo.findById(userId);
 
     if (!user) {
       throw new NotFoundError('User not found');
@@ -86,9 +78,16 @@ export class UsersService {
 
     const hashedNewPassword = await hashPassword(data.newPassword);
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedNewPassword }
-    });
+    await this.repo.updateById(userId, { password: hashedNewPassword });
+
+    try {
+      const notifications = new NotificationsService();
+      await notifications.notify({
+        userId,
+        type: 'in_app',
+        title: 'Password changed',
+        message: 'Your account password was changed successfully.'
+      });
+    } catch (_) {}
   }
 }

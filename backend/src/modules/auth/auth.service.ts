@@ -5,18 +5,15 @@ import { ConflictError } from '../../common/exceptions/ConflictError';
 import { UnauthorizedError } from '../../common/exceptions/UnauthorizedError';
 import { RegisterDto, LoginDto, AuthResponse, UserResponse } from './auth.types';
 import { addToBlacklist } from '../../common/utils/tokenBlacklist.util';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AuthRepository, PrismaAuthRepository } from './auth.repository';
 
 
 export class AuthService {
+  constructor(private readonly repo: AuthRepository = new PrismaAuthRepository()) {}
+
   async register(data: RegisterDto): Promise<AuthResponse> {
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: data.email },
-          { phoneNumber: data.phoneNumber }
-        ]
-      }
-    });
+    const existingUser = await this.repo.findUserByEmail(data.email) || await this.repo.findUserByPhone(data.phoneNumber);
 
     if (existingUser) {
       throw new ConflictError('User with this email or phone already exists');
@@ -24,25 +21,21 @@ export class AuthService {
 
     const hashedPassword = await hashPassword(data.password);
 
-    const user = await prisma.user.create({
-      data: {
-        email: data.email,
-        password: hashedPassword,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phoneNumber: data.phoneNumber,
-        role: 'customer',
-        status: 'active'
-      }
+    const user = await this.repo.createUser({
+      email: data.email,
+      password: hashedPassword,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      phoneNumber: data.phoneNumber,
+      role: 'customer',
+      status: 'active'
     });
 
     return this.generateTokens(user);
   }
 
   async login(data: LoginDto): Promise<AuthResponse> {
-    const user = await prisma.user.findUnique({
-      where: { email: data.email }
-    });
+    const user = await this.repo.findUserByEmail(data.email);
 
     if (!user) {
       throw new UnauthorizedError('Invalid credentials');
@@ -58,14 +51,23 @@ export class AuthService {
       throw new UnauthorizedError('Account is not active');
     }
 
-    return this.generateTokens(user);
+    const tokens = await this.generateTokens(user);
+
+    try {
+      const notifications = new NotificationsService();
+      await notifications.notify({
+        userId: user.id,
+        type: 'in_app',
+        title: 'Login successful',
+        message: `New login to your account.`
+      });
+    } catch (_) {}
+
+    return tokens;
   }
 
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
-    const tokenRecord = await prisma.refreshToken.findUnique({
-      where: { token: refreshToken },
-      include: { user: true }
-    });
+    const tokenRecord = await this.repo.findRefreshToken(refreshToken);
 
     if (!tokenRecord || tokenRecord.revokedAt || new Date() > tokenRecord.expiresAt) {
       throw new UnauthorizedError('Invalid refresh token');
@@ -75,11 +77,7 @@ export class AuthService {
   }
 
   async logout(refreshToken: string, accessToken: string): Promise<void> {
-    await prisma.refreshToken.updateMany({
-      where: { token: refreshToken },
-      data: { revokedAt: new Date() }
-    });
-    
+    await this.repo.revokeRefreshToken(refreshToken);
     await addToBlacklist(accessToken);
   }
 
@@ -89,12 +87,10 @@ export class AuthService {
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
-    await prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        token: refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-      }
+    await this.repo.createRefreshToken({
+      userId: user.id,
+      token: refreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     });
 
     return {

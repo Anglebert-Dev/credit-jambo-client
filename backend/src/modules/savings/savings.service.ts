@@ -1,15 +1,16 @@
 // Savings business logic
-import prisma from '../../config/database';
 import { BadRequestError } from '../../common/exceptions/BadRequestError';
 import { NotFoundError } from '../../common/exceptions/NotFoundError';
 import { ConflictError } from '../../common/exceptions/ConflictError';
 import { DepositDto, WithdrawDto, Transaction, TransactionHistoryResponse, SavingsAccount } from './savings.types';
+import { NotificationsService } from '../notifications/notifications.service';
+import { PrismaSavingsRepository, SavingsRepository } from './savings.repository';
 
 export class SavingsService {
+  constructor(private readonly repo: SavingsRepository = new PrismaSavingsRepository()) {}
+
   async createAccount(userId: string, name: string = 'My Savings Account', currency: string = 'RWF', initialDeposit: number = 0) {
-    const existingAccount = await prisma.savingsAccount.findUnique({
-      where: { userId }
-    });
+    const existingAccount = await this.repo.findAccountByUserId(userId);
 
     if (existingAccount) {
       throw new ConflictError('Savings account already exists');
@@ -19,14 +20,12 @@ export class SavingsService {
       throw new BadRequestError('Initial deposit cannot be negative');
     }
 
-    const account = await prisma.savingsAccount.create({
-      data: {
-        userId,
-        name,
-        balance: initialDeposit,
-        currency,
-        status: 'active'
-      }
+    const account = await this.repo.createAccount({
+      userId,
+      name,
+      balance: initialDeposit,
+      currency,
+      status: 'active'
     });
 
     return {
@@ -41,9 +40,7 @@ export class SavingsService {
   }
 
   async getAccount(userId: string) {
-    const account = await prisma.savingsAccount.findUnique({
-      where: { userId }
-    });
+    const account = await this.repo.findAccountByUserId(userId);
 
     if (!account) {
       throw new NotFoundError('Savings account not found');
@@ -62,24 +59,25 @@ export class SavingsService {
     const balanceBefore = Number(account.balance);
     const balanceAfter = balanceBefore + data.amount;
 
-    const [updatedAccount, transaction] = await prisma.$transaction([
-      prisma.savingsAccount.update({
-        where: { id: account.id },
-        data: { balance: balanceAfter }
-      }),
-      prisma.transaction.create({
-        data: {
-          savingsAccountId: account.id,
-          type: 'deposit',
-          amount: data.amount,
-          balanceBefore,
-          balanceAfter,
-          description: data.description || 'Deposit',
-          referenceNumber: this.generateReference(),
-          status: 'completed'
-        }
-      })
-    ]);
+    const { transaction } = await this.repo.updateBalanceAndCreateTransaction(account.id, balanceAfter, {
+      type: 'deposit',
+      amount: data.amount,
+      balanceBefore,
+      balanceAfter,
+      description: data.description || 'Deposit',
+      referenceNumber: this.generateReference(),
+      status: 'completed',
+    });
+
+    try {
+      const notifications = new NotificationsService();
+      await notifications.notify({
+        userId,
+        type: 'in_app',
+        title: 'Deposit successful',
+        message: `You deposited ${data.amount}. New balance: ${balanceAfter}.`
+      });
+    } catch (_) {}
 
     return this.mapTransaction(transaction);
   }
@@ -99,24 +97,25 @@ export class SavingsService {
 
     const balanceAfter = balanceBefore - data.amount;
 
-    const [updatedAccount, transaction] = await prisma.$transaction([
-      prisma.savingsAccount.update({
-        where: { id: account.id },
-        data: { balance: balanceAfter }
-      }),
-      prisma.transaction.create({
-        data: {
-          savingsAccountId: account.id,
-          type: 'withdrawal',
-          amount: data.amount,
-          balanceBefore,
-          balanceAfter,
-          description: data.description || 'Withdrawal',
-          referenceNumber: this.generateReference(),
-          status: 'completed'
-        }
-      })
-    ]);
+    const { transaction } = await this.repo.updateBalanceAndCreateTransaction(account.id, balanceAfter, {
+      type: 'withdrawal',
+      amount: data.amount,
+      balanceBefore,
+      balanceAfter,
+      description: data.description || 'Withdrawal',
+      referenceNumber: this.generateReference(),
+      status: 'completed',
+    });
+
+    try {
+      const notifications = new NotificationsService();
+      await notifications.notify({
+        userId,
+        type: 'in_app',
+        title: 'Withdrawal successful',
+        message: `You withdrew ${data.amount}. New balance: ${balanceAfter}.`
+      });
+    } catch (_) {}
 
     return this.mapTransaction(transaction);
   }
@@ -133,15 +132,8 @@ export class SavingsService {
     const account = await this.getAccount(userId);
 
     const [transactions, total] = await Promise.all([
-      prisma.transaction.findMany({
-        where: { savingsAccountId: account.id },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit
-      }),
-      prisma.transaction.count({
-        where: { savingsAccountId: account.id }
-      })
+      this.repo.listTransactions(account.id, (page - 1) * limit, limit),
+      this.repo.countTransactions(account.id)
     ]);
 
     return {
@@ -160,10 +152,7 @@ export class SavingsService {
       throw new BadRequestError('Account is already frozen');
     }
 
-    await prisma.savingsAccount.update({
-      where: { userId },
-      data: { status: 'frozen' }
-    });
+    await this.repo.updateAccountByUserId(userId, { status: 'frozen' });
   }
 
   async unfreezeAccount(userId: string): Promise<void> {
@@ -173,10 +162,7 @@ export class SavingsService {
       throw new BadRequestError('Account is already active');
     }
 
-    await prisma.savingsAccount.update({
-      where: { userId },
-      data: { status: 'active' }
-    });
+    await this.repo.updateAccountByUserId(userId, { status: 'active' });
   }
 
   async updateAccount(userId: string, name?: string, currency?: string): Promise<{ id: string; name: string; balance: number; currency: string; status: string; createdAt: Date; updatedAt: Date }> {
@@ -186,10 +172,7 @@ export class SavingsService {
     if (name !== undefined) updateData.name = name;
     if (currency !== undefined) updateData.currency = currency;
     
-    const updatedAccount = await prisma.savingsAccount.update({
-      where: { userId },
-      data: updateData
-    });
+    const updatedAccount = await this.repo.updateAccountByUserId(userId, updateData);
 
     return {
       id: updatedAccount.id,
@@ -209,9 +192,7 @@ export class SavingsService {
       throw new BadRequestError('Cannot delete account with non-zero balance. Please withdraw all funds first.');
     }
 
-    await prisma.savingsAccount.delete({
-      where: { userId }
-    });
+    await this.repo.deleteAccountByUserId(userId);
   }
 
   private generateReference(): string {
