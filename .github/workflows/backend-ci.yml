@@ -59,7 +59,7 @@ jobs:
       - name: Run database migrations
         working-directory: backend
         env:
-          DATABASE_URL: postgresql://postgres:pass@localhost:5432/credit_jambo_test
+          DATABASE_URL: postgresql://postgres:testpass@localhost:5432/credit_jambo_test
           JWT_ACCESS_SECRET: test_secret
           JWT_REFRESH_SECRET: test_refresh_secret
           REDIS_URL: redis://localhost:6379
@@ -68,7 +68,7 @@ jobs:
       - name: Run tests
         working-directory: backend
         env:
-          DATABASE_URL: postgresql://postgres:pass@localhost:5432/credit_jambo_test
+          DATABASE_URL: postgresql://postgres:testpass@localhost:5432/credit_jambo_test
           JWT_ACCESS_SECRET: test_secret
           JWT_REFRESH_SECRET: test_refresh_secret
           REDIS_URL: redis://localhost:6379
@@ -81,4 +81,3 @@ jobs:
       - name: Type check
         working-directory: backend
         run: npx tsc --noEmit || true
-
