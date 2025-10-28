@@ -1,0 +1,2 @@
+// Error Boundary component
+

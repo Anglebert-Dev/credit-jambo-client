@@ -1,0 +1,2 @@
+// Auth-related TypeScript types
+
