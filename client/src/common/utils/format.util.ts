@@ -3,12 +3,18 @@ export const formatCurrency = (
   currency: string = 'RWF',
   locale: string = 'en-RW'
 ): string => {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  const validCurrency = currency && currency !== 'string' && currency.length === 3 ? currency : 'RWF';
+  
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: validCurrency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch (error) {
+    return `${validCurrency} ${new Intl.NumberFormat('en-US').format(amount)}`;
+  }
 };
 
 export const formatNumber = (value: number): string => {

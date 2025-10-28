@@ -1,11 +1,14 @@
-// Root component - Main application entry
+import { AppRoutes } from './routes/AppRoutes';
+import { ToastContainer } from './common/components/Toast';
+import { ErrorBoundary } from './common/components/ErrorBoundary';
 
 function App() {
   return (
-    <div>
-      {/* Router will be added here */}
-    </div>
-  )
+    <ErrorBoundary>
+      <AppRoutes />
+      <ToastContainer />
+    </ErrorBoundary>
+  );
 }
 
-export default App
+export default App;

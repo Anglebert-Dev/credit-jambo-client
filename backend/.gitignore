@@ -16,5 +16,3 @@ dist
 
 prisma/generator
 prisma/migrations
-
-instruction.md

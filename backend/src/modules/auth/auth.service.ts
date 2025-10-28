@@ -102,7 +102,9 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         phoneNumber: user.phoneNumber,
-        role: user.role
+        role: user.role,
+        status: user.status,
+        createdAt: user.createdAt
       }
     };
   }

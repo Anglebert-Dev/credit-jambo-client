@@ -1,26 +1,23 @@
 export const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_BASE_URL ,
-  timeout: Number(import.meta.env.VITE_API_TIMEOUT),
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
+  timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 30000,
 } as const;
 
 export const API_ENDPOINTS = {
-  // Auth
   auth: {
     register: '/auth/register',
     login: '/auth/login',
     logout: '/auth/logout',
     refresh: '/auth/refresh',
   },
-  // Users
   users: {
     profile: '/users/profile',
     updateProfile: '/users/profile',
-    changePassword: '/users/change-password',
+    changePassword: '/users/password',
   },
-  // Savings
   savings: {
     account: '/savings/account',
-    createAccount: '/savings/account',
+    createAccount: '/savings/create',
     updateAccount: '/savings/account',
     deleteAccount: '/savings/account',
     deposit: '/savings/deposit',
@@ -30,15 +27,13 @@ export const API_ENDPOINTS = {
     freeze: '/savings/freeze',
     unfreeze: '/savings/unfreeze',
   },
-  // Credit
   credit: {
     request: '/credit/request',
     requests: '/credit/requests',
     requestById: (id: string) => `/credit/requests/${id}`,
-    repay: '/credit/repay',
-    repayments: (requestId: string) => `/credit/requests/${requestId}/repayments`,
+    repay: (id: string) => `/credit/repay/${id}`,
+    repayments: (requestId: string) => `/credit/repayments/${requestId}`,
   },
-  // Notifications
   notifications: {
     list: '/notifications',
     markAsRead: (id: string) => `/notifications/${id}/read`,

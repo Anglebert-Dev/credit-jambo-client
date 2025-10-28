@@ -8,29 +8,34 @@ interface AuthStore extends AuthState {
   register: (data: RegisterDto) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: UserResponse) => void;
-  initializeAuth: () => void;
 }
 
+const getInitialState = (): AuthState => {
+  const user = storage.getUser<UserResponse>();
+  const accessToken = storage.getAccessToken();
+  const refreshToken = storage.getRefreshToken();
+
+  if (user && accessToken && refreshToken) {
+    return {
+      user,
+      accessToken,
+      refreshToken,
+      isAuthenticated: true,
+      isInitialized: true,
+    };
+  }
+
+  return {
+    user: null,
+    accessToken: null,
+    refreshToken: null,
+    isAuthenticated: false,
+    isInitialized: true,
+  };
+};
+
 export const useAuthStore = create<AuthStore>((set) => ({
-  user: null,
-  accessToken: null,
-  refreshToken: null,
-  isAuthenticated: false,
-
-  initializeAuth: () => {
-    const user = storage.getUser<UserResponse>();
-    const accessToken = storage.getAccessToken();
-    const refreshToken = storage.getRefreshToken();
-
-    if (user && accessToken && refreshToken) {
-      set({
-        user,
-        accessToken,
-        refreshToken,
-        isAuthenticated: true,
-      });
-    }
-  },
+  ...getInitialState(),
 
   login: async (credentials: LoginDto) => {
     const response = await authService.login(credentials);
@@ -44,6 +49,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
       isAuthenticated: true,
+      isInitialized: true,
     });
   },
 
@@ -59,14 +65,18 @@ export const useAuthStore = create<AuthStore>((set) => ({
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
       isAuthenticated: true,
+      isInitialized: true,
     });
   },
 
   logout: async () => {
+    const refreshToken = storage.getRefreshToken();
+    
     try {
-      await authService.logout();
+      if (refreshToken) {
+        await authService.logout(refreshToken);
+      }
     } catch (error) {
-      console.error('Logout error:', error);
     } finally {
       storage.clearAuth();
       set({
@@ -74,6 +84,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         accessToken: null,
         refreshToken: null,
         isAuthenticated: false,
+        isInitialized: true,
       });
     }
   },

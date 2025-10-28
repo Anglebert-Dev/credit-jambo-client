@@ -1,5 +1,3 @@
-// API-related TypeScript types
-
 export interface ApiResponse<T = any> {
   success: boolean;
   message?: string;
@@ -35,7 +33,6 @@ export interface PaginationParams {
   limit?: number;
 }
 
-// Loading and error states for UI
 export interface RequestState {
   loading: boolean;
   error: string | null;

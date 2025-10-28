@@ -23,6 +23,8 @@ export interface UserResponse {
   lastName: string;
   phoneNumber: string;
   role: string;
+  status: string;
+  createdAt: Date;
 }
 
 export interface AuthResponse {

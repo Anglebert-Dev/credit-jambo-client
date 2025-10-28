@@ -20,7 +20,7 @@ export const userService = {
   },
 
   async changePassword(data: ChangePasswordDto): Promise<void> {
-    await api.put(API_ENDPOINTS.users.changePassword, data);
+    await api.patch(API_ENDPOINTS.users.changePassword, data);
   },
 };
 

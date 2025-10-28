@@ -10,15 +10,18 @@ export interface Toast {
 interface UIStore {
   isLoading: boolean;
   toasts: Toast[];
+  unreadNotifications: number;
   setLoading: (loading: boolean) => void;
   showToast: (toast: Omit<Toast, 'id'>) => void;
   removeToast: (id: string) => void;
   clearToasts: () => void;
+  setUnreadNotifications: (count: number) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
   isLoading: false,
   toasts: [],
+  unreadNotifications: 0,
 
   setLoading: (loading: boolean) => {
     set({ isLoading: loading });
@@ -48,6 +51,10 @@ export const useUIStore = create<UIStore>((set) => ({
 
   clearToasts: () => {
     set({ toasts: [] });
+  },
+
+  setUnreadNotifications: (count: number) => {
+    set({ unreadNotifications: Math.max(0, count) });
   },
 }));
 

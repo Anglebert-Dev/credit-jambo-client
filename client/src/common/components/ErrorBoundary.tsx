@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import type { ReactNode, ErrorInfo } from 'react';
+import type { ReactNode } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Button } from './Button';
 
@@ -22,9 +22,8 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
-  }
+  // componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  // }
 
   handleReset = () => {
     this.setState({ hasError: false, error: null });

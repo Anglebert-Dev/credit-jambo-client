@@ -34,8 +34,8 @@ export const creditService = {
 
   async repayCredit(data: CreditRepaymentDto): Promise<CreditRepayment> {
     const response = await api.post<ApiResponse<CreditRepayment>>(
-      API_ENDPOINTS.credit.repay,
-      data
+      API_ENDPOINTS.credit.repay(data.creditRequestId),
+      { amount: data.amount }
     );
     return response.data.data!;
   },

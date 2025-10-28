@@ -3,6 +3,9 @@ import type { ReactNode } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Home, PiggyBank, CreditCard, User, LogOut, Menu, X, Bell } from 'lucide-react';
 import { useAuth } from '../common/hooks/useAuth';
+import { useUIStore } from '../store/uiStore';
+import { useEffect } from 'react';
+import { notificationsService } from '../services/notifications.service';
 import { ROUTES } from '../config/routes.config';
 
 interface DashboardLayoutProps {
@@ -13,6 +16,7 @@ const navigation = [
   { name: 'Dashboard', href: ROUTES.DASHBOARD, icon: Home },
   { name: 'Savings', href: ROUTES.SAVINGS, icon: PiggyBank },
   { name: 'Credit', href: ROUTES.CREDIT, icon: CreditCard },
+  { name: 'Notifications', href: ROUTES.NOTIFICATIONS, icon: Bell },
   { name: 'Profile', href: ROUTES.PROFILE, icon: User },
 ];
 
@@ -21,6 +25,17 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { unreadNotifications, setUnreadNotifications } = useUIStore();
+
+  useEffect(() => {
+    const loadCount = async () => {
+      try {
+        const count = await notificationsService.getUnreadCount();
+        setUnreadNotifications(count);
+      } catch (_) {}
+    };
+    loadCount();
+  }, [setUnreadNotifications]);
 
   const handleLogout = async () => {
     await logout();
@@ -48,12 +63,14 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="text-gray-600 hover:text-gray-900 relative">
+            <Link to={ROUTES.NOTIFICATIONS} className="text-gray-600 hover:text-gray-900 relative">
               <Bell size={20} />
-              <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center">
-                3
-              </span>
-            </button>
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center">
+                  {Math.min(unreadNotifications, 99)}
+                </span>
+              )}
+            </Link>
             
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-[#00A651] flex items-center justify-center text-white font-semibold">

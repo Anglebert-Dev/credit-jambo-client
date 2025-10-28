@@ -20,8 +20,8 @@ export const authService = {
     return response.data.data!;
   },
 
-  async logout(): Promise<void> {
-    await api.post(API_ENDPOINTS.auth.logout);
+  async logout(refreshToken: string): Promise<void> {
+    await api.post(API_ENDPOINTS.auth.logout, { refreshToken });
   },
 
   async refreshToken(data: RefreshTokenDto): Promise<AuthResponse> {

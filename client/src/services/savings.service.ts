@@ -70,14 +70,14 @@ export const savingsService = {
   },
 
   async freezeAccount(): Promise<SavingsAccount> {
-    const response = await api.put<ApiResponse<SavingsAccount>>(
+    const response = await api.post<ApiResponse<SavingsAccount>>(
       API_ENDPOINTS.savings.freeze
     );
     return response.data.data!;
   },
 
   async unfreezeAccount(): Promise<SavingsAccount> {
-    const response = await api.put<ApiResponse<SavingsAccount>>(
+    const response = await api.post<ApiResponse<SavingsAccount>>(
       API_ENDPOINTS.savings.unfreeze
     );
     return response.data.data!;

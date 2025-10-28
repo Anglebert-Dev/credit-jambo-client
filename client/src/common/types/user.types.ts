@@ -1,5 +1,3 @@
-// User-related TypeScript types
-
 export interface UserProfile {
   id: string;
   email: string;
@@ -23,7 +21,6 @@ export interface ChangePasswordDto {
   newPassword: string;
 }
 
-// Savings types
 export interface SavingsAccount {
   id: string;
   name: string;
@@ -67,7 +64,6 @@ export interface UpdateAccountDto {
   currency?: string;
 }
 
-// Credit types
 export interface CreditRequest {
   id: string;
   amount: number;
@@ -100,7 +96,6 @@ export interface CreditRepaymentDto {
   amount: number;
 }
 
-// Notification types
 export interface Notification {
   id: string;
   type: string;

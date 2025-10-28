@@ -6,6 +6,11 @@ import type { ApiError } from '../common/types/api.types';
 
 class ApiService {
   private api: AxiosInstance;
+  private isRefreshing = false;
+  private failedQueue: Array<{
+    resolve: (value: any) => void;
+    reject: (reason?: any) => void;
+  }> = [];
 
   constructor() {
     this.api = axios.create({
@@ -19,25 +24,98 @@ class ApiService {
     this.setupInterceptors();
   }
 
+  private processQueue(error: any, token: string | null = null) {
+    this.failedQueue.forEach((prom) => {
+      if (error) {
+        prom.reject(error);
+      } else {
+        prom.resolve(token);
+      }
+    });
+    this.failedQueue = [];
+  }
+
   private setupInterceptors(): void {
     this.api.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
         const token = storage.getAccessToken();
+        
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
         }
+        
         return config;
       },
-      (error) => Promise.reject(error)
+      (error) => {
+        return Promise.reject(error);
+      }
     );
 
     this.api.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        return response;
+      },
       async (error: AxiosError<ApiError>) => {
-        if (error.response?.status === 401) {
-          storage.clearAuth();
-          window.location.href = '/login';
+        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+        const status = error.response?.status;
+
+        if (status === 401 && originalRequest && !originalRequest._retry) {
+          if (this.isRefreshing) {
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject });
+            })
+              .then((token) => {
+                if (originalRequest.headers) {
+                  originalRequest.headers.Authorization = `Bearer ${token}`;
+                }
+                return this.api(originalRequest);
+              })
+              .catch((err) => {
+                return Promise.reject(err);
+              });
+          }
+
+          originalRequest._retry = true;
+          this.isRefreshing = true;
+
+          const refreshToken = storage.getRefreshToken();
+
+          if (!refreshToken) {
+            this.isRefreshing = false;
+            storage.clearAuth();
+            window.location.href = '/login';
+            return Promise.reject(error);
+          }
+
+          try {
+            const response = await axios.post(
+              `${API_CONFIG.baseURL}/auth/refresh`,
+              { refreshToken },
+              { headers: { 'Content-Type': 'application/json' } }
+            );
+
+            const { accessToken, refreshToken: newRefreshToken, user } = response.data.data;
+
+            storage.setAccessToken(accessToken);
+            storage.setRefreshToken(newRefreshToken);
+            storage.setUser(user);
+
+            this.processQueue(null, accessToken);
+
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            }
+            this.isRefreshing = false;
+            return this.api(originalRequest);
+          } catch (refreshError) {
+            this.processQueue(refreshError, null);
+            this.isRefreshing = false;
+            storage.clearAuth();
+            window.location.href = '/login';
+            return Promise.reject(refreshError);
+          }
         }
+
         return Promise.reject(this.handleError(error));
       }
     );

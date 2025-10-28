@@ -12,6 +12,8 @@ export const ROUTES = {
   CREDIT_REQUEST: '/credit/request',
   CREDIT_REPAY: '/credit/repay',
   
+  NOTIFICATIONS: '/notifications',
+  
   PROFILE: '/profile',
 } as const;
 
@@ -25,6 +27,7 @@ export const PROTECTED_ROUTES = [
   ROUTES.CREDIT,
   ROUTES.CREDIT_REQUEST,
   ROUTES.CREDIT_REPAY,
+  ROUTES.NOTIFICATIONS,
   ROUTES.PROFILE,
 ];
 
