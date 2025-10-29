@@ -54,8 +54,22 @@ const RepayPage = () => {
   const fetchApprovedCredits = async () => {
     try {
       const data = await creditService.getCreditRequests({ page: 1, limit: 100 });
-      const approvedCredits = (data.data || []).filter((c) => c.status === 'APPROVED');
-      setCredits(approvedCredits);
+      const approved = (data.data || []).filter((c) => c.status?.toLowerCase() === 'approved');
+
+      const filtered = await Promise.all(
+        approved.map(async (credit) => {
+          try {
+            const history = await creditService.getRepaymentHistory(credit.id, { page: 1, limit: 100 });
+            const totalRepaid = (history.data || []).reduce((sum, r) => sum + Number(r.amount), 0);
+            const totalOwed = Number(credit.amount) * (1 + Number(credit.interestRate) / 100);
+            return totalRepaid < totalOwed ? credit : null;
+          } catch {
+            return credit;
+          }
+        })
+      );
+
+      setCredits(filtered.filter(Boolean) as typeof approved);
     } catch (err: any) {
       showError(err?.message || 'Failed to load credit requests');
     }

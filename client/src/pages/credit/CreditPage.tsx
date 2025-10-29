@@ -16,6 +16,7 @@ const CreditPage = () => {
   const [creditRequests, setCreditRequests] = useState<CreditRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<CreditRequest | null>(null);
   const [repayments, setRepayments] = useState<CreditRepayment[]>([]);
+  const [remainingById, setRemainingById] = useState<Record<string, number>>({});
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -42,6 +43,22 @@ const CreditPage = () => {
       });
       setCreditRequests(data.data || []);
       setPagination(data.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 });
+
+      const approved = (data.data || []).filter((r: CreditRequest) => r.status?.toLowerCase() === 'approved');
+      const entries = await Promise.all(
+        approved.map(async (r: CreditRequest) => {
+          try {
+            const history = await creditService.getRepaymentHistory(r.id, { page: 1, limit: 100 });
+            const totalRepaid = (history.data || []).reduce((sum, pay) => sum + Number(pay.amount), 0);
+            const totalOwed = Number(r.amount) * (1 + Number(r.interestRate) / 100);
+            const remaining = Math.max(0, totalOwed - totalRepaid);
+            return [r.id, remaining] as const;
+          } catch {
+            return [r.id, Number.POSITIVE_INFINITY] as const; 
+          }
+        })
+      );
+      setRemainingById((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
     } catch (err: any) {
       showError(err?.message || 'Failed to load credit requests');
     } finally {
@@ -53,30 +70,49 @@ const CreditPage = () => {
     try {
       const data = await creditService.getRepaymentHistory(requestId, { page: 1, limit: 100 });
       setRepayments(data.data || []);
+
+      const req = creditRequests.find((r) => r.id === requestId);
+      if (req) {
+        const totalRepaid = (data.data || []).reduce((sum, pay) => sum + Number(pay.amount), 0);
+        const totalOwed = Number(req.amount) * (1 + Number(req.interestRate) / 100);
+        const remaining = Math.max(0, totalOwed - totalRepaid);
+        setRemainingById((prev) => ({ ...prev, [requestId]: remaining }));
+      }
     } catch (err: any) {
       showError(err?.message || 'Failed to load repayments');
     }
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
+    const s = (status || '').toLowerCase();
+    switch (s) {
+      case 'approved':
         return 'bg-green-100 text-green-700';
-      case 'PENDING':
+      case 'pending':
         return 'bg-yellow-100 text-yellow-700';
-      case 'REJECTED':
+      case 'rejected':
         return 'bg-red-100 text-red-700';
-      case 'REPAID':
+      case 'repaid':
         return 'bg-blue-100 text-blue-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }
   };
 
-  const calculateTotalRepaid = (creditRequestId: string) => {
-    return repayments
-      .filter((r) => r.id === creditRequestId)
-      .reduce((sum, r) => sum + r.amount, 0);
+  const calculateTotalRepaid = () => {
+    return repayments.reduce((sum, r) => sum + Number(r.amount), 0);
+  };
+
+  const calculateTotalOwed = (request: CreditRequest) => {
+    const principal = Number(request.amount);
+    const rate = Number(request.interestRate);
+    return principal * (1 + rate / 100);
+  };
+
+  const calculateRemaining = (request: CreditRequest | null) => {
+    if (!request) return 0;
+    const remaining = calculateTotalOwed(request) - calculateTotalRepaid();
+    return remaining > 0 ? remaining : 0;
   };
 
   if (isLoading) {
@@ -140,7 +176,7 @@ const CreditPage = () => {
                     <span>Applied:</span>
                     <span className="font-medium text-black">{formatDateTime(request.createdAt)}</span>
                   </div>
-                  {request.status === 'APPROVED' && (
+                  {request.status?.toLowerCase() === 'approved' && (remainingById[request.id] ?? Number.POSITIVE_INFINITY) > 0 && (
                     <div className="pt-2 mt-2 border-t">
                       <Link to={ROUTES.CREDIT_REPAY}>
                         <Button variant="primary" size="sm" className="w-full">
@@ -219,6 +255,63 @@ const CreditPage = () => {
                   <p className="text-sm font-semibold text-green-800">
                     Approved on {selectedRequest.approvedAt && formatDateTime(selectedRequest.approvedAt)}
                   </p>
+                </div>
+              )}
+
+              {selectedRequest.status?.toLowerCase() === 'approved' && (
+                <div className="mt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-black">Repayment History</h3>
+                    <div className="text-sm">
+                      <span className="text-gray-600">Total Repaid: </span>
+                      <span className="font-semibold text-black">{formatCurrency(calculateTotalRepaid())}</span>
+                      <span className="mx-2 text-gray-300">|</span>
+                      <span className="text-gray-600">Remaining: </span>
+                      <span className="font-semibold text-black">{formatCurrency(calculateRemaining(selectedRequest))}</span>
+                    </div>
+                  </div>
+
+                  {repayments.length > 0 ? (
+                    <div className="space-y-2">
+                      {repayments.map((repayment) => (
+                        <div
+                          key={repayment.id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-black">{formatCurrency(repayment.amount)}</p>
+                            <p className="text-xs text-gray-600">
+                              Reference: {repayment.referenceNumber}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {formatDateTime(repayment.paymentDate)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 text-center bg-gray-50 rounded-lg border border-gray-200">
+                      <p className="text-sm text-gray-600">No repayments made yet</p>
+                      {calculateRemaining(selectedRequest) > 0 && (
+                        <Link to={ROUTES.CREDIT_REPAY} className="inline-block mt-2">
+                          <Button variant="primary" size="sm">
+                            <DollarSign size={16} className="mr-1" />
+                            Make First Repayment
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  )}
+
+                  {calculateRemaining(selectedRequest) <= 0 && (
+                    <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                      <p className="text-sm font-semibold text-green-800">✓ Credit Fully Repaid</p>
+                      <p className="text-xs text-green-700 mt-1">
+                        Total repaid: {formatCurrency(calculateTotalRepaid())} of {formatCurrency(calculateTotalOwed(selectedRequest))}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </Card>

@@ -88,6 +88,7 @@ export interface CreditRepayment {
   id: string;
   amount: number;
   referenceNumber: string;
+  paymentDate: string;
   createdAt: string;
 }
 
