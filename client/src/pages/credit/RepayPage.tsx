@@ -15,10 +15,7 @@ import type { CreditRepaymentDto, CreditRequest } from '../../common/types/user.
 
 const repaymentSchema = z.object({
   creditRequestId: z.string().min(1, 'Please select a credit request'),
-  amount: z
-    .number()
-    .positive('Amount must be greater than 0')
-    .min(100, 'Minimum repayment amount is 100 RWF'),
+  amount: z.number().positive('Amount must be greater than 0'),
 });
 
 const RepayPage = () => {
@@ -27,6 +24,7 @@ const RepayPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [credits, setCredits] = useState<CreditRequest[]>([]);
   const [selectedCredit, setSelectedCredit] = useState<CreditRequest | null>(null);
+  const [remainingBalance, setRemainingBalance] = useState<number>(0);
 
   const {
     register,
@@ -48,8 +46,26 @@ const RepayPage = () => {
     if (creditRequestId) {
       const credit = credits.find((c) => c.id === creditRequestId);
       setSelectedCredit(credit || null);
+      if (credit) {
+        fetchRemainingBalance(credit.id);
+      }
     }
   }, [creditRequestId, credits]);
+
+  const fetchRemainingBalance = async (creditId: string) => {
+    try {
+      const history = await creditService.getRepaymentHistory(creditId, { page: 1, limit: 100 });
+      const credit = credits.find((c) => c.id === creditId);
+      if (credit) {
+        const totalRepaid = (history.data || []).reduce((sum, r) => sum + Number(r.amount), 0);
+        const totalOwed = Number(credit.amount) * (1 + Number(credit.interestRate) / 100);
+        const remaining = Math.max(0, totalOwed - totalRepaid);
+        setRemainingBalance(remaining);
+      }
+    } catch (err) {
+      setRemainingBalance(0);
+    }
+  };
 
   const fetchApprovedCredits = async () => {
     try {
@@ -78,6 +94,12 @@ const RepayPage = () => {
   const onSubmit = async (data: CreditRepaymentDto) => {
     try {
       setIsLoading(true);
+      const minAmount = remainingBalance > 0 && remainingBalance < 100 ? remainingBalance : 100;
+      if (data.amount < minAmount) {
+        showError(`Minimum repayment is ${minAmount.toFixed(0)} RWF${remainingBalance < 100 ? ' (remaining balance)' : ''}`);
+        setIsLoading(false);
+        return;
+      }
       await creditService.repayCredit(data);
       success('Repayment successful!');
       navigate(ROUTES.CREDIT);
@@ -164,6 +186,12 @@ const RepayPage = () => {
                     <p className="text-gray-600">Purpose</p>
                     <p className="font-semibold text-black">{selectedCredit.purpose.substring(0, 20)}...</p>
                   </div>
+                  <div className="col-span-2">
+                    <p className="text-gray-600">Remaining Balance</p>
+                    <p className="font-semibold text-black text-lg">
+                      {formatCurrency(remainingBalance)}
+                    </p>
+                  </div>
                 </div>
               </Card>
             )}
@@ -173,7 +201,7 @@ const RepayPage = () => {
               type="number"
               placeholder="5000"
               error={errors.amount?.message}
-              helperText="Minimum repayment: 100 RWF"
+              helperText={`Minimum repayment: ${remainingBalance > 0 && remainingBalance < 100 ? remainingBalance.toFixed(0) : 100} RWF${remainingBalance < 100 && remainingBalance > 0 ? ' (remaining balance)' : ''}`}
               required
               {...register('amount', { valueAsNumber: true })}
             />
