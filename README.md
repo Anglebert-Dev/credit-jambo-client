@@ -69,6 +69,18 @@ credit-jambo-client/
 - Repository pattern; centralized error handling and custom exceptions
 - Swagger API docs; unit tests for business flows
 
+## What You Can Do (App Capabilities)
+
+### Client (Customer)
+- Register and login with JWT (auto refresh, session-aware)
+- View and update profile; change password
+- Create a savings account (select currency), view balance and transaction history
+- Deposit and withdraw funds; account freeze/unfreeze; delete account
+- Request credit with amount, purpose, and duration; see request status and details
+- Make repayments; see repayment history; UI hides repayment when fully repaid
+- Receive in‑app notifications; see unread badge; open notifications page and mark read
+
+
 ## Getting Started
 
 ### Prerequisites

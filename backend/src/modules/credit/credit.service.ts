@@ -3,6 +3,8 @@ import { NotFoundError } from '../../common/exceptions/NotFoundError';
 import { ConflictError } from '../../common/exceptions/ConflictError';
 import { CreditRequestDto, CreditRepaymentDto, CreditRequest, CreditRepayment, RepaymentHistoryResponse, CreditRequestResponse } from './credit.types';
 import { CreditRepository, PrismaCreditRepository } from './credit.repository';
+import prisma from '../../config/database';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export class CreditService {
   constructor(private readonly repo: CreditRepository = new PrismaCreditRepository()) {}
@@ -36,6 +38,23 @@ export class CreditService {
       interestRate,
       status: 'pending'
     });
+
+    try {
+      const admins = await prisma.user.findMany({ where: { role: 'admin', status: 'active' } });
+      if (admins.length > 0) {
+        const notifications = new NotificationsService();
+        await Promise.all(
+          admins.map(admin =>
+            notifications.notify({
+              userId: admin.id,
+              type: 'in_app',
+              title: 'New credit request submitted',
+              message: `User ${userId} requested ${data.amount} for ${data.durationMonths} month(s).`,
+            })
+          )
+        );
+      }
+    } catch (_) {}
 
     return {
       id: request.id,
