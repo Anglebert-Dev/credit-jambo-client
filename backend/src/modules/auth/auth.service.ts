@@ -73,6 +73,10 @@ export class AuthService {
       throw new UnauthorizedError('Invalid refresh token');
     }
 
+    if (tokenRecord.user.status !== 'active') {
+      throw new UnauthorizedError('Account is not active');
+    }
+
     return this.generateTokens(tokenRecord.user, context);
   }
 

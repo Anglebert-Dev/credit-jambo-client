@@ -83,8 +83,7 @@ class ApiService {
           if (!refreshToken) {
             this.isRefreshing = false;
             storage.clearAuth();
-            window.location.href = '/login';
-            return Promise.reject(error);
+            return Promise.reject(this.handleError(error));
           }
 
           try {
@@ -107,12 +106,12 @@ class ApiService {
             }
             this.isRefreshing = false;
             return this.api(originalRequest);
-          } catch (refreshError) {
+          } catch (refreshError: any) {
             this.processQueue(refreshError, null);
             this.isRefreshing = false;
             storage.clearAuth();
-            window.location.href = '/login';
-            return Promise.reject(refreshError);
+            const handledError = this.handleError(refreshError);
+            return Promise.reject(handledError);
           }
         }
 
@@ -121,14 +120,41 @@ class ApiService {
     );
   }
 
-  private handleError(error: AxiosError<ApiError>): ApiError {
+  private handleError(error: AxiosError<ApiError>): any {
     if (error.response?.data) {
-      return error.response.data;
+      const apiError = error.response.data;
+      
+      if (typeof apiError === 'object' && apiError !== null) {
+        return {
+          ...apiError,
+          message: apiError.message || `Error: ${error.response.status}`,
+          statusCode: error.response.status,
+        };
+      }
+      
+      if (typeof apiError === 'string') {
+        return {
+          message: apiError,
+          statusCode: error.response.status,
+        };
+      }
+    }
+
+    if (error.message) {
+      return {
+        message: error.message,
+        statusCode: error.response?.status,
+      };
     }
 
     return {
-      success: false,
-      message: error.message || 'An unexpected error occurred',
+      message: error.response?.status === 401 
+        ? 'Your session has expired. Please log in again.'
+        : error.response?.status === 403
+        ? 'You do not have permission to perform this action.'
+        : error.response?.status === 404
+        ? 'The requested resource was not found.'
+        : `An unexpected error occurred (${error.response?.status || 'unknown'})`,
       statusCode: error.response?.status,
     };
   }

@@ -3,6 +3,7 @@ import { verifyAccessToken } from '../utils/jwt.util';
 import { UnauthorizedError } from '../exceptions/UnauthorizedError';
 import { JwtPayload } from '../types/jwt.types';
 import { isBlacklisted } from '../utils/tokenBlacklist.util';
+import prisma from '../../config/database';
 
 export const authMiddleware = async (
   req: Request & { user?: JwtPayload },
@@ -24,6 +25,19 @@ export const authMiddleware = async (
     }
     
     const payload = verifyAccessToken(token);
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { status: true }
+    });
+
+    if (!user) {
+      throw new UnauthorizedError('User not found');
+    }
+
+    if (user.status !== 'active') {
+      throw new UnauthorizedError('Account is not active');
+    }
 
     req.user = payload;
     next();

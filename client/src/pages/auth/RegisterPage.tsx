@@ -50,10 +50,35 @@ const RegisterPage = () => {
     try {
       setIsLoading(true);
       await registerUser(data);
-      success('Registration successful! Welcome to Credit Jambo.');
-      navigate(ROUTES.DASHBOARD);
+      success('Registration successful! Welcome to Credit Jambo.', 6000);
+      setTimeout(() => {
+        navigate(ROUTES.DASHBOARD);
+      }, 500);
     } catch (err: any) {
-      showError(err?.message || 'Registration failed. Please try again.');
+      let errorMessage = '';
+      
+      if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err?.statusCode) {
+        errorMessage = `Error ${err.statusCode}`;
+      }
+      
+      let userMessage = 'Registration failed. Please try again.';
+      const lowerMessage = errorMessage.toLowerCase();
+      
+      if (lowerMessage.includes('already exists') || (lowerMessage.includes('email') && lowerMessage.includes('phone'))) {
+        userMessage = 'An account with this email or phone number already exists. Please use different credentials or try logging in.';
+      } else if (lowerMessage.includes('validation') || lowerMessage.includes('invalid')) {
+        userMessage = 'Please check your input and ensure all fields are valid.';
+      } else if (errorMessage) {
+        userMessage = errorMessage;
+      }
+      
+      showError(userMessage, 8000);
     } finally {
       setIsLoading(false);
     }

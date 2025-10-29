@@ -41,10 +41,37 @@ const LoginPage = () => {
     try {
       setIsLoading(true);
       await login(data);
-      success('Login successful! Welcome back.');
-      navigate(ROUTES.DASHBOARD);
+      success('Login successful! Welcome back.', 6000);
+      setTimeout(() => {
+        navigate(ROUTES.DASHBOARD);
+      }, 500);
     } catch (err: any) {
-      showError(err?.message || 'Login failed. Please check your credentials.');
+      let errorMessage = '';
+      
+      if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err?.statusCode) {
+        errorMessage = `Error ${err.statusCode}`;
+      }
+      
+      let userMessage = 'Login failed. Please check your credentials.';
+      const lowerMessage = errorMessage.toLowerCase();
+      
+      if (lowerMessage.includes('not active') || lowerMessage.includes('account is not active')) {
+        userMessage = 'Your account is not active. Please contact support for assistance.';
+      } else if (lowerMessage.includes('invalid credentials') || lowerMessage.includes('incorrect')) {
+        userMessage = 'Invalid email or password. Please check your credentials and try again.';
+      } else if (lowerMessage.includes('expired') || lowerMessage.includes('session')) {
+        userMessage = 'Your session has expired. Please log in again.';
+      } else if (errorMessage) {
+        userMessage = errorMessage;
+      }
+      
+      showError(userMessage, 8000);
     } finally {
       setIsLoading(false);
     }
