@@ -206,14 +206,14 @@ const SavingsPage = () => {
       </div>
 
       <Card padding="md" className="bg-linear-to-br from-[#00A651] to-[#008F45] text-white">
-        <div className="flex items-start justify-between mb-4">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+          <div className="min-w-0">
             <p className="text-white/80 text-sm mb-1">{account.name}</p>
-            <p className="text-4xl font-bold">
+            <p className="text-2xl sm:text-3xl md:text-4xl font-bold break-all leading-tight">
               {formatCurrency(account.balance, account.currency)}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="ghost"
               size="sm"
@@ -247,10 +247,10 @@ const SavingsPage = () => {
         </div>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Link to={ROUTES.SAVINGS_DEPOSIT}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Link to={ROUTES.SAVINGS_DEPOSIT} className="w-full">
           <Card padding="md" className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 sm:gap-4 min-h-24">
               <div className="p-3 bg-green-100 rounded-full shrink-0">
                 <ArrowDownRight className="text-green-600" size={24} />
               </div>
@@ -262,9 +262,9 @@ const SavingsPage = () => {
           </Card>
         </Link>
 
-        <Link to={ROUTES.SAVINGS_WITHDRAW}>
+        <Link to={ROUTES.SAVINGS_WITHDRAW} className="w-full">
           <Card padding="md" className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 sm:gap-4 min-h-24">
               <div className="p-3 bg-red-100 rounded-full shrink-0">
                 <ArrowUpRight className="text-red-600" size={24} />
               </div>
@@ -317,9 +317,10 @@ const SavingsPage = () => {
                   </div>
                   <div className="text-right">
                     <p
-                      className={`text-lg font-bold ${
+                      className={`text-sm sm:text-lg font-bold tabular-nums truncate max-w-[10ch] sm:max-w-[14ch] ${
                         transaction.type.toLowerCase() === 'deposit' ? 'text-green-600' : 'text-red-600'
                       }`}
+                      title={`${transaction.type.toLowerCase() === 'deposit' ? '+' : '-'}${formatCurrency(transaction.amount)}`}
                     >
                       {transaction.type.toLowerCase() === 'deposit' ? '+' : '-'}{formatCurrency(transaction.amount)}
                     </p>
