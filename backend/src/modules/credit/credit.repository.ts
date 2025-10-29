@@ -12,6 +12,7 @@ export interface CreditRepository {
   createRepayment(data: any): Promise<any>;
   listRepayments(requestId: string, skip: number, take: number): Promise<any[]>;
   countRepayments(requestId: string): Promise<number>;
+  updateRequestById(id: string, data: any): Promise<any>;
 }
 
 export class PrismaCreditRepository implements CreditRepository {
@@ -58,5 +59,9 @@ export class PrismaCreditRepository implements CreditRepository {
 
   countRepayments(requestId: string) {
     return prisma.creditRepayment.count({ where: { creditRequestId: requestId } });
+  }
+
+  updateRequestById(id: string, data: any) {
+    return prisma.creditRequest.update({ where: { id }, data });
   }
 }

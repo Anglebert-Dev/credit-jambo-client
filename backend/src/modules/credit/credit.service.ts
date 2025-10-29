@@ -128,12 +128,12 @@ export class CreditService {
       throw new BadRequestError('Credit request must be approved before making repayments');
     }
 
-    const totalRepayments = request.repayments.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0);
+    const totalRepaidBefore = request.repayments.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0);
     const totalOwed = Number(request.amount) * (1 + Number(request.interestRate) / 100);
-    const remainingBalance = totalOwed - totalRepayments;
+    const remainingBefore = totalOwed - totalRepaidBefore;
 
-    if (data.amount > remainingBalance) {
-      throw new BadRequestError(`Payment amount exceeds remaining balance. Remaining: ${remainingBalance.toFixed(2)}`);
+    if (data.amount > remainingBefore) {
+      throw new BadRequestError(`Payment amount exceeds remaining balance. Remaining: ${remainingBefore.toFixed(2)}`);
     }
 
     if (data.amount <= 0) {
@@ -153,6 +153,12 @@ export class CreditService {
       amount: data.amount,
       referenceNumber
     });
+
+    const totalRepaidAfter = totalRepaidBefore + Number(repayment.amount);
+    const remainingAfter = totalOwed - totalRepaidAfter;
+    if (remainingAfter <= 0.000001) {
+      await this.repo.updateRequestById(requestId, { status: 'repaid' });
+    }
 
     return {
       id: repayment.id,
