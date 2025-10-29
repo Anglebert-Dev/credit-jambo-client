@@ -126,7 +126,10 @@ router.post(
   validationMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await authService.login(req.body);
+      const userAgent = req.headers['user-agent'] || null;
+      const ipHeader = (req.headers['x-forwarded-for'] as string) || '';
+      const ip = (ipHeader.split(',')[0] || '').trim() || req.ip || null;
+      const result = await authService.login(req.body, { deviceInfo: typeof userAgent === 'string' ? userAgent : null, ipAddress: ip });
       res.json(successResponse(result, 'Login successful'));
     } catch (error) {
       next(error);
@@ -179,7 +182,10 @@ router.post(
   validationMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await authService.refreshToken(req.body.refreshToken);
+      const userAgent = req.headers['user-agent'] || null;
+      const ipHeader = (req.headers['x-forwarded-for'] as string) || '';
+      const ip = (ipHeader.split(',')[0] || '').trim() || req.ip || null;
+      const result = await authService.refreshToken(req.body.refreshToken, { deviceInfo: typeof userAgent === 'string' ? userAgent : null, ipAddress: ip });
       res.json(successResponse(result, 'Token refreshed successfully'));
     } catch (error) {
       next(error);

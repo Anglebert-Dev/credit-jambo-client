@@ -34,7 +34,7 @@ export class AuthService {
     return this.generateTokens(user);
   }
 
-  async login(data: LoginDto): Promise<AuthResponse> {
+  async login(data: LoginDto, context?: { deviceInfo?: string | null; ipAddress?: string | null }): Promise<AuthResponse> {
     const user = await this.repo.findUserByEmail(data.email);
 
     if (!user) {
@@ -51,7 +51,7 @@ export class AuthService {
       throw new UnauthorizedError('Account is not active');
     }
 
-    const tokens = await this.generateTokens(user);
+    const tokens = await this.generateTokens(user, context);
 
     try {
       const notifications = new NotificationsService();
@@ -66,14 +66,14 @@ export class AuthService {
     return tokens;
   }
 
-  async refreshToken(refreshToken: string): Promise<AuthResponse> {
+  async refreshToken(refreshToken: string, context?: { deviceInfo?: string | null; ipAddress?: string | null }): Promise<AuthResponse> {
     const tokenRecord = await this.repo.findRefreshToken(refreshToken);
 
     if (!tokenRecord || tokenRecord.revokedAt || new Date() > tokenRecord.expiresAt) {
       throw new UnauthorizedError('Invalid refresh token');
     }
 
-    return this.generateTokens(tokenRecord.user);
+    return this.generateTokens(tokenRecord.user, context);
   }
 
   async logout(refreshToken: string, accessToken: string): Promise<void> {
@@ -81,7 +81,7 @@ export class AuthService {
     await addToBlacklist(accessToken);
   }
 
-  private async generateTokens(user: any): Promise<AuthResponse> {
+  private async generateTokens(user: any, context?: { deviceInfo?: string | null; ipAddress?: string | null }): Promise<AuthResponse> {
     const payload = { sub: user.id, email: user.email, role: user.role };
 
     const accessToken = generateAccessToken(payload);
@@ -90,7 +90,9 @@ export class AuthService {
     await this.repo.createRefreshToken({
       userId: user.id,
       token: refreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      deviceInfo: context?.deviceInfo ?? null,
+      ipAddress: context?.ipAddress ?? null
     });
 
     return {
