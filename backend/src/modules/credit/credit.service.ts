@@ -40,7 +40,17 @@ export class CreditService {
     });
 
     try {
-      const admins = await prisma.user.findMany({ where: { role: 'admin', status: 'active' } });
+      const [admins, requester] = await Promise.all([
+        prisma.user.findMany({ where: { role: 'admin', status: 'active' } }),
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { firstName: true, lastName: true, email: true }
+        })
+      ]);
+
+      const displayName = requester
+        ? [requester.firstName, requester.lastName].filter(Boolean).join(' ') || requester.email || userId
+        : userId;
       if (admins.length > 0) {
         const notifications = new NotificationsService();
         await Promise.all(
@@ -49,7 +59,7 @@ export class CreditService {
               userId: admin.id,
               type: 'in_app',
               title: 'New credit request submitted',
-              message: `User ${userId} requested ${data.amount} for ${data.durationMonths} month(s).`,
+              message: `${displayName} requested ${data.amount} for ${data.durationMonths} month(s).`,
             })
           )
         );
